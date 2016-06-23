@@ -443,9 +443,9 @@ struct sharedObjectsStruct {
 typedef struct zskiplistNode {
     robj *obj; //数据
     double score; //用来排序
-    struct zskiplistNode *backward; //后节点
+    struct zskiplistNode *backward; //向后的指针（向左）
     struct zskiplistLevel {
-        struct zskiplistNode *forward; //前节点
+        struct zskiplistNode *forward; //向前的指针（向右）
         unsigned int span; //到下一个节点的步伐
     } level[];
 } zskiplistNode;

@@ -334,7 +334,8 @@ robj *getDecodedObject(robj *o) {
  *
  * Important note: if objects are not integer encoded, but binary-safe strings,
  * sdscmp() from sds.c will apply memcmp() so this function ca be considered
- * binary safe. */
+ * binary safe. 
+ * 比较2个字符串*/
 int compareStringObjects(robj *a, robj *b) {
     redisAssertWithInfo(NULL,a,a->type == REDIS_STRING && b->type == REDIS_STRING);
     char bufa[128], bufb[128], *astr, *bstr;

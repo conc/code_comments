@@ -52,6 +52,7 @@
 #include "redis.h"
 #include <math.h>
 
+// 创建一个节点
 zskiplistNode *zslCreateNode(int level, double score, robj *obj) {
     zskiplistNode *zn = zmalloc(sizeof(*zn)+level*sizeof(struct zskiplistLevel));
     zn->score = score;
@@ -59,6 +60,7 @@ zskiplistNode *zslCreateNode(int level, double score, robj *obj) {
     return zn;
 }
 
+// 创建skiplist
 zskiplist *zslCreate(void) {
     int j;
     zskiplist *zsl;
@@ -76,11 +78,13 @@ zskiplist *zslCreate(void) {
     return zsl;
 }
 
+//删除节点
 void zslFreeNode(zskiplistNode *node) {
     decrRefCount(node->obj);
     zfree(node);
 }
 
+//删除整个sl
 void zslFree(zskiplist *zsl) {
     zskiplistNode *node = zsl->header->level[0].forward, *next;
 
@@ -96,7 +100,8 @@ void zslFree(zskiplist *zsl) {
 /* Returns a random level for the new skiplist node we are going to create.
  * The return value of this function is between 1 and ZSKIPLIST_MAXLEVEL
  * (both inclusive), with a powerlaw-alike distribution where higher
- * levels are less likely to be returned. */
+ * levels are less likely to be returned. 
+ * 产生一个随机的层号 越低的层号越容易返回*/
 int zslRandomLevel(void) {
     int level = 1;
     while ((random()&0xFFFF) < (ZSKIPLIST_P * 0xFFFF))
@@ -104,12 +109,15 @@ int zslRandomLevel(void) {
     return (level<ZSKIPLIST_MAXLEVEL) ? level : ZSKIPLIST_MAXLEVEL;
 }
 
+// 插入
 zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj) {
     zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;
     unsigned int rank[ZSKIPLIST_MAXLEVEL];
     int i, level;
 
     redisAssert(!isnan(score));
+    
+    //寻找每层插入的位置,update数据即存放的插入位置
     x = zsl->header;
     for (i = zsl->level-1; i >= 0; i--) {
         /* store rank that is crossed to reach the insert position */
@@ -117,7 +125,7 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj) {
         while (x->level[i].forward &&
             (x->level[i].forward->score < score ||
                 (x->level[i].forward->score == score &&
-                compareStringObjects(x->level[i].forward->obj,obj) < 0))) {
+                compareStringObjects(x->level[i].forward->obj,obj) < 0))) { //分数相同的话按照字典排序
             rank[i] += x->level[i].span;
             x = x->level[i].forward;
         }
@@ -127,8 +135,8 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj) {
      * scores, and the re-insertion of score and redis object should never
      * happen since the caller of zslInsert() should test in the hash table
      * if the element is already inside or not. */
-    level = zslRandomLevel();
-    if (level > zsl->level) {
+    level = zslRandomLevel(); //插入的层
+    if (level > zsl->level) { //该插入的层号大于目前已有的层
         for (i = zsl->level; i < level; i++) {
             rank[i] = 0;
             update[i] = zsl->header;
@@ -160,7 +168,8 @@ zskiplistNode *zslInsert(zskiplist *zsl, double score, robj *obj) {
     return x;
 }
 
-/* Internal function used by zslDelete, zslDeleteByScore and zslDeleteByRank */
+/* Internal function used by zslDelete, zslDeleteByScore and zslDeleteByRank 
+ * 删除*/
 void zslDeleteNode(zskiplist *zsl, zskiplistNode *x, zskiplistNode **update) {
     int i;
     for (i = 0; i < zsl->level; i++) {
@@ -181,7 +190,8 @@ void zslDeleteNode(zskiplist *zsl, zskiplistNode *x, zskiplistNode **update) {
     zsl->length--;
 }
 
-/* Delete an element with matching score/object from the skiplist. */
+/* Delete an element with matching score/object from the skiplist. 
+ * 按分数删除*/
 int zslDelete(zskiplist *zsl, double score, robj *obj) {
     zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;
     int i;
@@ -216,7 +226,8 @@ static int zslValueLteMax(double value, zrangespec *spec) {
     return spec->maxex ? (value < spec->max) : (value <= spec->max);
 }
 
-/* Returns if there is a part of the zset is in range. */
+/* Returns if there is a part of the zset is in range. 
+ * 比对分数是否在sl范围中*/
 int zslIsInRange(zskiplist *zsl, zrangespec *range) {
     zskiplistNode *x;
 
@@ -287,7 +298,8 @@ zskiplistNode *zslLastInRange(zskiplist *zsl, zrangespec range) {
 /* Delete all the elements with score between min and max from the skiplist.
  * Min and max are inclusive, so a score >= min || score <= max is deleted.
  * Note that this function takes the reference to the hash table view of the
- * sorted set, in order to remove the elements from the hash table too. */
+ * sorted set, in order to remove the elements from the hash table too. 
+ * 删除给定范围的数据 score >= min || score <= max is deleted*/
 unsigned long zslDeleteRangeByScore(zskiplist *zsl, zrangespec range, dict *dict) {
     zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;
     unsigned long removed = 0;
@@ -318,7 +330,8 @@ unsigned long zslDeleteRangeByScore(zskiplist *zsl, zrangespec range, dict *dict
 }
 
 /* Delete all the elements with rank between start and end from the skiplist.
- * Start and end are inclusive. Note that start and end need to be 1-based */
+ * Start and end are inclusive. Note that start and end need to be 1-based 
+ * 删除start到end的数据*/
 unsigned long zslDeleteRangeByRank(zskiplist *zsl, unsigned int start, unsigned int end, dict *dict) {
     zskiplistNode *update[ZSKIPLIST_MAXLEVEL], *x;
     unsigned long traversed = 0, removed = 0;
@@ -350,7 +363,8 @@ unsigned long zslDeleteRangeByRank(zskiplist *zsl, unsigned int start, unsigned 
 /* Find the rank for an element by both score and key.
  * Returns 0 when the element cannot be found, rank otherwise.
  * Note that the rank is 1-based due to the span of zsl->header to the
- * first element. */
+ * first element. 
+ * 获取rank*/
 unsigned long zslGetRank(zskiplist *zsl, double score, robj *o) {
     zskiplistNode *x;
     unsigned long rank = 0;
