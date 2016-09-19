@@ -28,6 +28,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+// redis-cli
+// 阅读时有参照网上的资料
+
 #include "fmacros.h"
 #include "version.h"
 
@@ -156,6 +159,7 @@ static sds cliVersion() {
     return version;
 }
 
+//帮助信息
 static void cliInitHelp() {
     int commandslen = sizeof(commandHelp)/sizeof(struct commandHelp);
     int groupslen = sizeof(commandGroups)/sizeof(char*);
@@ -666,6 +670,7 @@ static redisReply *reconnectingInfo(void) {
  * User interface
  *--------------------------------------------------------------------------- */
 
+//解析参数
 static int parseOptions(int argc, char **argv) {
     int i;
 
@@ -1444,10 +1449,10 @@ int main(int argc, char **argv) {
     config.hostip = sdsnew("127.0.0.1");
     config.hostport = 6379;
     config.hostsocket = NULL;
-    config.repeat = 1;
-    config.interval = 0;
-    config.dbnum = 0;
-    config.interactive = 0;
+    config.repeat = 1;      //命令重复执行次数
+    config.interval = 0;    //命令重复执行间隔
+    config.dbnum = 0;       //数据库no
+    config.interactive = 0; //交互模式 or 命令模式
     config.shutdown = 0;
     config.monitor_mode = 0;
     config.pubsub_mode = 0;
@@ -1459,7 +1464,7 @@ int main(int argc, char **argv) {
     config.pipe_mode = 0;
     config.bigkeys = 0;
     config.stdinarg = 0;
-    config.auth = NULL;
+    config.auth = NULL; //需要鉴权时的密码信息
     config.eval = NULL;
     if (!isatty(fileno(stdout)) && (getenv("FAKETTY") == NULL))
         config.output = OUTPUT_RAW;
